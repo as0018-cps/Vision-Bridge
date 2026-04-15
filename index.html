@@ -1406,6 +1406,9 @@
       model: localStorage.getItem('vb_model') || 'gemini-2.5-flash',
       rate: parseFloat(localStorage.getItem('vb_rate') || '0.9'),
       navInt: parseInt(localStorage.getItem('vb_navint') || '10'),
+      navHistory: [],
+      sosActive: false,
+      sosTimer: null,
     };
 
     // Mode accent colours
@@ -1600,7 +1603,8 @@
     const PROMPTS = {
       describe: "You are an AI assistant helping a visually impaired person understand their surroundings. Describe the scene in natural, clear spoken language. Focus on: what is directly ahead, nearby objects and their positions, estimated distances where possible, and any potential hazards. Be concise — under 80 words. Speak directly to the person as if you are their eyes.",
       read: "You are an AI assistant helping a visually impaired person. Read all visible text in this image clearly and completely. State what type of content it is first (menu, sign, label, medicine, etc.). Organise the information logically. Keep the reading natural and flowing — do not list raw text, make it sound like someone reading aloud.",
-      navigate: "You are a real-time walking guide for a visually impaired person. IMPORTANT RULES: 1) ONLY describe what you can ACTUALLY SEE in this specific image — never guess or make up objects. 2) If the path is clear, say so simply. 3) Name specific objects by their appearance (colour, shape, size) rather than generic terms. 4) Use clock-face directions (straight ahead, 2 o'clock, 10 o'clock) for positions. 5) Give distance estimates in steps, not metres. 6) Maximum 2 short sentences. 7) If the image is blurry or unclear, say you cannot see clearly and ask the user to hold the phone steadier.",
+      navigate: "You are a real-time walking guide for a visually impaired person. CAMERA PERSPECTIVE: The phone is held at chest or waist height pointing forward. Bottom of the image = floor near the person's feet. Middle of the image = eye level / straight ahead. Top of image = far distance or ceiling. A wall or door filling the frame is NOT an obstacle on the floor — it is a vertical surface ahead. RULES: 1) ONLY describe what you ACTUALLY SEE — never guess. 2) Distinguish between floor-level obstacles (things to trip on) and vertical surfaces (walls, doors, furniture fronts). 3) A door ahead means a passage, not a blockage — say if it appears open or closed. 4) Use clock-face directions (straight ahead, 2 o'clock, 10 o'clock). 5) Distance in steps. 6) Maximum 2 short sentences. 7) If blurry, say so.",
+      emergency: "You are an EMERGENCY guide for a visually impaired person who may be in danger. Scan the image for: 1) EXIT SIGNS, doors, windows, or any opening that leads outside. 2) Light sources that indicate an exit direction. 3) Obstacles between the person and the nearest exit. 4) Any visible hazards (fire, smoke, water, broken glass). Give clear, calm, step-by-step directions to the nearest exit. Use clock-face directions and step counts. Be direct and reassuring. Maximum 3 sentences.",
     };
 
     function captureFrame() {
@@ -1808,6 +1812,9 @@
       S.navIdx++;
       S.navScanning = false;
       if (!S.navigating) return; // stopped while scanning
+      // Store in nav history for emergency context (keep last 3)
+      S.navHistory.push(txt);
+      if (S.navHistory.length > 3) S.navHistory.shift();
       document.getElementById('navTxt').innerHTML = txt;
       document.getElementById('navSub').textContent = '↻ Next scan in ' + S.navInt + ' seconds';
       al(txt); say(txt);
@@ -1827,29 +1834,90 @@
     //  EMERGENCY
     // ══════════════════════════════════════════════════
     async function sosOpen() {
+      if (S.navigating) navStop(); // stop regular navigation
       document.getElementById('sos').classList.add('on');
-      say("Emergency mode activated. Scanning your surroundings for the nearest exit. Stay calm and stay still.");
-      await wait(1800);
+      S.sosActive = true;
+      say("Emergency mode activated. Scanning for exits. Stay calm.");
+      await wait(1500);
+      // Build context from recent navigation
+      const context = S.navHistory.length > 0
+        ? 'Recent surroundings: ' + S.navHistory.join(' | ') + '. '
+        : '';
+      // First scan
+      await sosLoop(context);
+      // Continuous scanning every 8 seconds
+      S.sosTimer = setInterval(() => { if (S.sosActive) sosLoop(context); }, 8000);
+    }
+
+    async function sosLoop(context) {
+      if (!S.sosActive) return;
       let txt;
       if (S.key) {
         try {
-          S.mode = 'describe';
           await camOn();
-          txt = await callAI();
-          txt = "Emergency mode. " + txt + " Stay calm and move toward the clearest exit path.";
-        } catch {
-          txt = DEMO.emergency[0];
+          const b64 = captureFrame();
+          const prompt = context + PROMPTS.emergency;
+          // Call AI directly with emergency prompt (bypass mode-based routing)
+          const url = S.provider === 'gemini'
+            ? 'https://generativelanguage.googleapis.com/v1beta/models/' + S.model + ':generateContent?key=' + S.key
+            : 'https://api.anthropic.com/v1/messages';
+
+          let response;
+          if (S.provider === 'gemini') {
+            response = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [
+                  { inlineData: { mimeType: 'image/jpeg', data: b64 } },
+                  { text: prompt }
+                ]}],
+                generationConfig: { maxOutputTokens: 300 }
+              })
+            });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const data = await response.json();
+            txt = data.candidates[0].content.parts[0].text;
+          } else {
+            response = await fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': S.key,
+                'anthropic-version': '2023-06-01',
+                'anthropic-dangerous-direct-browser-access': 'true',
+              },
+              body: JSON.stringify({
+                model: S.model, max_tokens: 300,
+                messages: [{ role: 'user', content: [
+                  { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+                  { type: 'text', text: prompt }
+                ]}]
+              })
+            });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const data = await response.json();
+            txt = data.content[0].text;
+          }
+        } catch (e) {
+          console.error('SOS API error:', e);
+          txt = DEMO.emergency[Math.floor(Math.random() * DEMO.emergency.length)];
         }
       } else {
-        txt = DEMO.emergency[0];
+        await wait(1000);
+        txt = DEMO.emergency[Math.floor(Math.random() * DEMO.emergency.length)];
       }
+      if (!S.sosActive) return;
       document.getElementById('sosP').textContent = txt;
       say(txt); al('Emergency: ' + txt);
     }
 
     function sosClose() {
+      S.sosActive = false;
+      clearInterval(S.sosTimer);
       document.getElementById('sos').classList.remove('on');
-      say("Emergency mode closed. You are back in the main app.");
+      stopSpeech();
+      say("Emergency mode closed. You are safe.");
     }
 
     // ══════════════════════════════════════════════════
