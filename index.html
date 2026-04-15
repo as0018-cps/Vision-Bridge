@@ -1352,11 +1352,11 @@
         aria-label="Adjust speech playback speed">
       <div class="cfg-range-row"><span>Slow</span><span>Fast</span></div>
 
-      <label class="cfg-label" for="navInterval">Navigate scan interval (seconds) — <span id="navVal">5</span>s</label>
-      <input type="range" class="cfg-range" id="navInterval" min="3" max="10" step="1" value="5"
+      <label class="cfg-label" for="navInterval">Navigate scan interval (seconds) — <span id="navVal">10</span>s</label>
+      <input type="range" class="cfg-range" id="navInterval" min="5" max="20" step="1" value="10"
         oninput="document.getElementById('navVal').textContent=this.value"
         aria-label="How often navigation scans in seconds">
-      <div class="cfg-range-row"><span>3s (fast)</span><span>10s (slow)</span></div>
+      <div class="cfg-range-row"><span>5s (fast)</span><span>20s (thorough)</span></div>
 
       <button class="cfg-save" onclick="cfgSave()" aria-label="Save all settings">SAVE SETTINGS</button>
 
@@ -1405,7 +1405,7 @@
       key: localStorage.getItem('vb_key') || '',
       model: localStorage.getItem('vb_model') || 'gemini-2.5-flash',
       rate: parseFloat(localStorage.getItem('vb_rate') || '0.9'),
-      navInt: parseInt(localStorage.getItem('vb_navint') || '5'),
+      navInt: parseInt(localStorage.getItem('vb_navint') || '10'),
     };
 
     // Mode accent colours
@@ -1600,7 +1600,7 @@
     const PROMPTS = {
       describe: "You are an AI assistant helping a visually impaired person understand their surroundings. Describe the scene in natural, clear spoken language. Focus on: what is directly ahead, nearby objects and their positions, estimated distances where possible, and any potential hazards. Be concise — under 80 words. Speak directly to the person as if you are their eyes.",
       read: "You are an AI assistant helping a visually impaired person. Read all visible text in this image clearly and completely. State what type of content it is first (menu, sign, label, medicine, etc.). Organise the information logically. Keep the reading natural and flowing — do not list raw text, make it sound like someone reading aloud.",
-      navigate: "You are a real-time navigation guide for a visually impaired person who is walking. Describe ONLY what is immediately relevant for their next 1 to 3 steps. Be extremely concise — maximum 2 short sentences. Focus on: is the path clear, any obstacles or hazards, direction to move. Use simple directional language: left, right, ahead, stop. Do not describe the full scene.",
+      navigate: "You are a real-time walking guide for a visually impaired person. IMPORTANT RULES: 1) ONLY describe what you can ACTUALLY SEE in this specific image — never guess or make up objects. 2) If the path is clear, say so simply. 3) Name specific objects by their appearance (colour, shape, size) rather than generic terms. 4) Use clock-face directions (straight ahead, 2 o'clock, 10 o'clock) for positions. 5) Give distance estimates in steps, not metres. 6) Maximum 2 short sentences. 7) If the image is blurry or unclear, say you cannot see clearly and ask the user to hold the phone steadier.",
     };
 
     function captureFrame() {
@@ -1775,21 +1775,28 @@
     // ══════════════════════════════════════════════════
     function navStart() {
       if (S.navigating) return;
-      S.navigating = true; S.navIdx = 0;
+      S.navigating = true; S.navIdx = 0; S.navScanning = false;
       document.getElementById('navpanel').classList.add('on');
       document.getElementById('mainLbl').textContent = 'NAVIGATING...';
       document.getElementById('mainBtn').classList.add('busy');
       setStatus('NAVIGATING');
       camOn();
-      say("Navigation mode started. I will guide you continuously. Point the camera ahead as you walk. Say stop to end navigation.");
-      navLoop();
-      S.navTimer = setInterval(navLoop, S.navInt * 1000);
+      say("Navigation started. Point camera ahead. I will scan every " + S.navInt + " seconds. Say stop to end.");
+      // First scan after a short delay to let camera warm up
+      setTimeout(() => { if (S.navigating) navLoop(); }, 2000);
+      S.navTimer = setInterval(() => { if (S.navigating) navLoop(); }, S.navInt * 1000);
     }
 
     async function navLoop() {
+      // Prevent overlapping scans — skip if previous call is still pending
+      if (S.navScanning) return;
+      S.navScanning = true;
       let txt;
       if (S.key) {
-        try { txt = await callAI(); }
+        try {
+          S.mode = 'navigate'; // ensure correct prompt is used
+          txt = await callAI();
+        }
         catch (e) {
           console.error('Nav API error:', e);
           txt = DEMO.navigate[S.navIdx % DEMO.navigate.length];
@@ -1799,6 +1806,8 @@
         txt = DEMO.navigate[S.navIdx % DEMO.navigate.length];
       }
       S.navIdx++;
+      S.navScanning = false;
+      if (!S.navigating) return; // stopped while scanning
       document.getElementById('navTxt').innerHTML = txt;
       document.getElementById('navSub').textContent = '↻ Next scan in ' + S.navInt + ' seconds';
       al(txt); say(txt);
