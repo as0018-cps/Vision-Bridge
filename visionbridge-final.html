@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>VisionBridge — AI Eyes for Everyone</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --cream: #f5f0e8;
+      --warm: #ede5d0;
+      --paper: #faf7f2;
+      --ink: #1a1410;
+      --amber: #e8a020;
+      --amber-deep: #c4841a;
+      --rust: #c94a2a;
+      --sage: #4a7c59;
+      --blue: #5b8ccc;
+      --ink-faint: rgba(26, 20, 16, 0.1);
+      --ink-mid: rgba(26, 20, 16, 0.45);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Libre Baskerville', Georgia, serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100dvh;
+      overflow-x: hidden;
+    }
+
+    /* ── SPLASH ── */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: var(--ink);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: opacity 0.5s ease;
+      overflow: hidden;
+    }
+
+    #splash.gone {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(245, 240, 232, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(245, 240, 232, 0.04) 1px, transparent 1px);
+      background-size: 44px 44px;
+    }
+
+    .splash-eye {
+      width: 112px;
+      height: 62px;
+      border: 2px solid var(--amber);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 40px;
+      animation: blink 4s ease-in-out infinite;
+    }
+
+    .splash-eye::before {
+      content: '';
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      background: var(--amber);
+      border-radius: 50%;
+    }
+
+    .splash-eye::after {
+      content: '';
+      position: absolute;
+      width: 11px;
+      height: 11px;
+      background: var(--ink);
+      border-radius: 50%;
+    }
+
+    @keyframes blink {
+
+      0%,
+      88%,
+      100% {
+        transform: scaleY(1)
+      }
+
+      94% {
+        transform: scaleY(0.06)
+      }
+    }
+
+    .splash-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 4px;
+      color: var(--amber);
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    .splash-h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(54px, 14vw, 82px);
+      color: var(--cream);
+      letter-spacing: 2px;
+      line-height: 0.9;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .splash-h1 em {
+      display: block;
+      color: var(--amber);
+      font-style: normal;
+    }
+
+    .splash-p {
+      font-size: 13px;
+      color: rgba(245, 240, 232, 0.5);
+      text-align: center;
+      line-height: 1.85;
+      max-width: 270px;
+      margin-bottom: 50px;
+      font-style: italic;
+    }
+
+    .splash-btn {
+      background: var(--amber);
+      color: var(--ink);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 2px;
+      padding: 18px 60px;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s;
+    }
+
+    .splash-btn::after {
+      content: '';
+      position: absolute;
+      inset: 4px -4px -4px 4px;
+      background: var(--amber-deep);
+      z-index: -1;
+    }
+
+    .splash-btn:active {
+      transform: translate(3px, 3px);
+    }
+
+    .splash-btn:active::after {
+      inset: 1px -1px -1px 1px;
+    }
+
+    /* ── APP ── */
+    #app {
+      display: none;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    #app.on {
+      display: flex;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--ink);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 2.5px solid var(--ink);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--cream);
+      letter-spacing: 1px;
+    }
+
+    .logo span {
+      color: var(--amber);
+    }
+
+    .status-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--amber);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sdot {
+      width: 6px;
+      height: 6px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.2
+      }
+    }
+
+    /* ── CAMERA ── */
+    .cam-wrap {
+      position: relative;
+      background: #0d0b08;
+      border-bottom: 2.5px solid var(--ink);
+      overflow: hidden;
+    }
+
+    #cam {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.4s;
+    }
+
+    #cam.on {
+      opacity: 1;
+    }
+
+    #cap {
+      display: none;
+    }
+
+    .cam-ui {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .brk {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+    }
+
+    .brk-tl {
+      top: 14px;
+      left: 14px;
+      border-top: 2px solid var(--amber);
+      border-left: 2px solid var(--amber);
+    }
+
+    .brk-tr {
+      top: 14px;
+      right: 14px;
+      border-top: 2px solid var(--amber);
+      border-right: 2px solid var(--amber);
+    }
+
+    .brk-bl {
+      bottom: 14px;
+      left: 14px;
+      border-bottom: 2px solid var(--amber);
+      border-left: 2px solid var(--amber);
+    }
+
+    .brk-br {
+      bottom: 14px;
+      right: 14px;
+      border-bottom: 2px solid var(--amber);
+      border-right: 2px solid var(--amber);
+    }
+
+    .beam {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--amber), transparent);
+      opacity: 0;
+      top: 0;
+    }
+
+    .beam.go {
+      opacity: 1;
+      animation: beamMove 1.8s linear infinite;
+    }
+
+    @keyframes beamMove {
+      from {
+        top: 0%
+      }
+
+      to {
+        top: 100%
+      }
+    }
+
+    .cam-mode-badge {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: rgba(245, 240, 232, 0.5);
+      background: rgba(26, 20, 16, 0.6);
+      padding: 4px 12px;
+      border: 1px solid rgba(232, 160, 32, 0.2);
+    }
+
+    .cam-ph {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    .cam-ph-eye {
+      width: 56px;
+      height: 32px;
+      border: 1.5px solid rgba(245, 240, 232, 0.15);
+      border-radius: 50%;
+      position: relative;
+    }
+
+    .cam-ph-eye::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(245, 240, 232, 0.15);
+    }
+
+    .cam-ph p {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: rgba(245, 240, 232, 0.2);
+      text-align: center;
+      text-transform: uppercase;
+      padding: 0 48px;
+      line-height: 1.9;
+    }
+
+    /* ── RESULT ── */
+    .result-wrap {
+      background: var(--paper);
+      border-bottom: 2px solid var(--ink-faint);
+      padding: 20px;
+      min-height: 108px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .result-wrap::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--amber);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .result-wrap.lit::before {
+      opacity: 1;
+    }
+
+    .result-eye {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rpip {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex-shrink: 0;
+    }
+
+    .result-txt {
+      font-size: 15.5px;
+      line-height: 1.8;
+      color: var(--ink);
+    }
+
+    .result-txt.speaking {
+      color: var(--amber-deep);
+    }
+
+    .dots {
+      display: none;
+      gap: 5px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .dots.on {
+      display: flex;
+    }
+
+    .dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+      animation: think 1s ease-in-out infinite;
+    }
+
+    .dots span:nth-child(2) {
+      animation-delay: .15s
+    }
+
+    .dots span:nth-child(3) {
+      animation-delay: .3s
+    }
+
+    @keyframes think {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0.5);
+        opacity: 0.3
+      }
+
+      40% {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    /* ── NAV PANEL ── */
+    #navpanel {
+      display: none;
+      background: var(--ink);
+      color: var(--cream);
+      padding: 20px;
+      border-bottom: 2.5px solid var(--ink);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #navpanel::after {
+      content: 'NAVIGATING';
+      position: absolute;
+      top: 50%;
+      right: -18px;
+      transform: translateY(-50%) rotate(90deg);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 4px;
+      color: rgba(232, 160, 32, 0.1);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    #navpanel.on {
+      display: block;
+    }
+
+    .nav-hdr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--amber);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nblink {
+      width: 7px;
+      height: 7px;
+      background: var(--amber);
+      border-radius: 50%;
+      animation: pulse 0.7s ease-in-out infinite;
+    }
+
+    .nav-txt {
+      font-size: 22px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .nav-txt strong {
+      color: var(--amber);
+      font-style: italic;
+    }
+
+    .nav-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: rgba(245, 240, 232, 0.3);
+      margin-bottom: 16px;
+    }
+
+    .nav-stop {
+      background: transparent;
+      border: 1.5px solid var(--rust);
+      color: var(--rust);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 1.5px;
+      padding: 10px 28px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .nav-stop:active {
+      background: var(--rust);
+      color: var(--cream);
+    }
+
+    /* ── MODES GRID ── */
+    .modes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-bottom: 2.5px solid var(--ink);
+    }
+
+    .mtile {
+      padding: 22px 18px;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      background: var(--cream);
+      position: relative;
+      overflow: hidden;
+      border-right: 1px solid var(--ink-faint);
+      border-bottom: 1px solid var(--ink-faint);
+      transition: background 0.12s;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-height: 108px;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .mtile:nth-child(2n) {
+      border-right: none;
+    }
+
+    .mtile:nth-child(3),
+    .mtile:nth-child(4) {
+      border-bottom: none;
+    }
+
+    .mtile:active {
+      background: var(--warm);
+    }
+
+    .mtile.sel {
+      background: var(--ink);
+    }
+
+    .mtile.sel .tname {
+      color: var(--cream);
+    }
+
+    .mtile.sel .tsub {
+      color: rgba(245, 240, 232, 0.38);
+    }
+
+    .mtile.sel .tnum {
+      color: rgba(245, 240, 232, 0.08);
+    }
+
+    .mtile::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: transparent;
+      transition: background 0.2s;
+    }
+
+    .mtile.sel.m-describe::after {
+      background: var(--sage);
+    }
+
+    .mtile.sel.m-read::after {
+      background: var(--amber);
+    }
+
+    .mtile.sel.m-navigate::after {
+      background: var(--blue);
+    }
+
+    .mtile.sel.m-emergency::after {
+      background: var(--rust);
+    }
+
+    .tnum {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 34px;
+      color: var(--ink-faint);
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      transition: color 0.2s;
+    }
+
+    .tname {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.5px;
+      color: var(--ink);
+      margin-top: auto;
+      transition: color 0.2s;
+    }
+
+    .tsub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--ink-mid);
+      line-height: 1.5;
+      transition: color 0.2s;
+    }
+
+    /* ── ACTION BAR ── */
+    .actbar {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      background: var(--paper);
+      border-bottom: 2px solid var(--ink-faint);
+      align-items: center;
+    }
+
+    .btn-main {
+      flex: 1;
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      padding: 18px 24px;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .btn-main::after {
+      content: '';
+      position: absolute;
+      inset: 3px -3px -3px 3px;
+      background: var(--amber-deep);
+      z-index: -1;
+    }
+
+    .btn-main:active {
+      transform: translate(3px, 3px);
+    }
+
+    .btn-main:active::after {
+      inset: 1px -1px -1px 1px;
+    }
+
+    .btn-main.busy {
+      background: var(--warm);
+      color: var(--ink-mid);
+    }
+
+    .btn-main.busy::after {
+      background: rgba(26, 20, 16, 0.08);
+    }
+
+    .btn-icon {
+      width: 54px;
+      height: 54px;
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.1s, background 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    .btn-icon:active {
+      transform: scale(0.92);
+    }
+
+    .btn-icon.mic-on {
+      background: var(--rust);
+      border-color: var(--rust);
+      animation: micring 1s ease-in-out infinite;
+    }
+
+    @keyframes micring {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(201, 74, 42, 0.4)
+      }
+
+      50% {
+        box-shadow: 0 0 0 10px rgba(201, 74, 42, 0)
+      }
+    }
+
+    /* ── SOS OVERLAY ── */
+    #sos {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--rust);
+      z-index: 150;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 32px;
+      text-align: center;
+    }
+
+    #sos.on {
+      display: flex;
+    }
+
+    .sos-eye {
+      width: 100px;
+      height: 55px;
+      border: 2.5px solid rgba(245, 240, 232, 0.6);
+      border-radius: 50%;
+      position: relative;
+      margin-bottom: 30px;
+      animation: sospulse 0.9s ease-in-out infinite;
+    }
+
+    .sos-eye::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 22px;
+      height: 22px;
+      background: var(--cream);
+      border-radius: 50%;
+    }
+
+    @keyframes sospulse {
+
+      0%,
+      100% {
+        transform: scale(1)
+      }
+
+      50% {
+        transform: scale(1.06)
+      }
+    }
+
+    .sos-h {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 58px;
+      color: var(--cream);
+      letter-spacing: 4px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+
+    .sos-p {
+      font-size: 17px;
+      line-height: 1.75;
+      color: rgba(245, 240, 232, 0.85);
+      max-width: 290px;
+      margin-bottom: 36px;
+      font-style: italic;
+    }
+
+    .sos-close {
+      background: var(--cream);
+      color: var(--rust);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      padding: 16px 44px;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* ── SETTINGS SHEET ── */
+    #cfg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 20, 16, 0.72);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    #cfg.on {
+      display: flex;
+    }
+
+    .cfg-sheet {
+      background: var(--paper);
+      border-top: 2.5px solid var(--ink);
+      padding: 28px 24px 48px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 92dvh;
+      overflow-y: auto;
+    }
+
+    .cfg-drag {
+      width: 36px;
+      height: 3px;
+      background: var(--ink-faint);
+      margin: 0 auto 24px;
+      border-radius: 2px;
+    }
+
+    .cfg-h {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 30px;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .cfg-sub {
+      font-size: 13px;
+      color: var(--ink-mid);
+      font-style: italic;
+      margin-bottom: 24px;
+      line-height: 1.7;
+    }
+
+    .cfg-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .cfg-input,
+    .cfg-select {
+      width: 100%;
+      background: var(--cream);
+      border: 2px solid var(--ink);
+      color: var(--ink);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      padding: 13px 16px;
+      outline: none;
+      margin-bottom: 20px;
+      transition: border-color 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+
+    .cfg-input:focus,
+    .cfg-select:focus {
+      border-color: var(--amber);
+    }
+
+    .cfg-input::placeholder {
+      color: var(--ink-mid);
+    }
+
+    .cfg-select {
+      cursor: pointer;
+    }
+
+    .cfg-range {
+      width: 100%;
+      margin-bottom: 8px;
+      accent-color: var(--amber);
+    }
+
+    .cfg-range-row {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--ink-mid);
+      margin-bottom: 20px;
+    }
+
+    .cfg-save {
+      width: 100%;
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 2px;
+      padding: 17px;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s;
+    }
+
+    .cfg-save::after {
+      content: '';
+      position: absolute;
+      inset: 3px -3px -3px 3px;
+      background: var(--amber-deep);
+      z-index: -1;
+    }
+
+    .cfg-save:active {
+      transform: translate(3px, 3px);
+    }
+
+    .cfg-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      background: var(--warm);
+      border-left: 3px solid var(--amber);
+      font-size: 12px;
+      color: var(--ink-mid);
+      line-height: 1.75;
+      font-style: italic;
+    }
+
+    .cfg-note strong {
+      color: var(--ink);
+      font-style: normal;
+    }
+
+    .cfg-section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14px;
+      letter-spacing: 2px;
+      color: var(--ink-mid);
+      margin-bottom: 14px;
+      margin-top: 4px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--ink-faint);
+    }
+
+    /* API status indicator */
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border: 1.5px solid var(--ink-faint);
+      background: var(--cream);
+      margin-bottom: 20px;
+    }
+
+    .api-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--ink-faint);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .api-dot.live {
+      background: var(--sage);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    .api-dot.error {
+      background: var(--rust);
+    }
+
+    .api-status-txt {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--ink-mid);
+    }
+
+    .api-test-btn {
+      margin-left: auto;
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 6px 14px;
+      border: none;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ── VOICE CHIP ── */
+    #vc {
+      display: none;
+      position: fixed;
+      bottom: 88px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 10px 18px;
+      align-items: center;
+      gap: 10px;
+      z-index: 50;
+      white-space: nowrap;
+      border-left: 3px solid var(--amber);
+    }
+
+    #vc.on {
+      display: flex;
+    }
+
+    .vbars {
+      display: flex;
+      gap: 2px;
+      align-items: flex-end;
+    }
+
+    .vb {
+      width: 3px;
+      background: var(--amber);
+      border-radius: 1px;
+      animation: vbaranim 0.7s ease-in-out infinite;
+    }
+
+    .vb:nth-child(1) {
+      height: 8px
+    }
+
+    .vb:nth-child(2) {
+      height: 14px;
+      animation-delay: .1s
+    }
+
+    .vb:nth-child(3) {
+      height: 10px;
+      animation-delay: .2s
+    }
+
+    .vb:nth-child(4) {
+      height: 16px;
+      animation-delay: .05s
+    }
+
+    .vb:nth-child(5) {
+      height: 8px;
+      animation-delay: .15s
+    }
+
+    @keyframes vbaranim {
+
+      0%,
+      100% {
+        transform: scaleY(0.35)
+      }
+
+      50% {
+        transform: scaleY(1)
+      }
+    }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 96px;
+      left: 50%;
+      transform: translateX(-50%) translateY(8px);
+      background: var(--ink);
+      color: var(--cream);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 1px;
+      padding: 10px 20px;
+      opacity: 0;
+      transition: all 0.25s;
+      z-index: 60;
+      white-space: nowrap;
+      pointer-events: none;
+      border-left: 3px solid var(--amber);
+    }
+
+    #toast.on {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── DEMO TAG ── */
+    .demo-tag {
+      position: fixed;
+      top: 62px;
+      right: 0;
+      background: var(--amber);
+      color: var(--ink);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 2px;
+      padding: 4px 10px;
+      text-transform: uppercase;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    /* ── A11Y ── */
+    .sr {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
+    button:focus-visible {
+      outline: 2.5px solid var(--amber);
+      outline-offset: 2px;
+    }
+
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2.5px solid var(--amber);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div aria-live="assertive" aria-atomic="true" class="sr" id="al"></div>
+
+  <!-- SPLASH -->
+  <div id="splash" role="dialog" aria-modal="true" aria-label="VisionBridge welcome">
+    <div class="splash-grid" aria-hidden="true"></div>
+    <div class="splash-eye" aria-hidden="true"></div>
+    <p class="splash-sub">AI-powered vision assistance</p>
+    <h1 class="splash-h1">Vision<em>Bridge</em></h1>
+    <p class="splash-p">Your AI eyes. Describe the world, read any text, navigate safely — entirely by voice.</p>
+    <button class="splash-btn" onclick="boot()" aria-label="Start VisionBridge application">OPEN YOUR EYES</button>
+  </div>
+
+  <!-- APP -->
+  <div id="app" role="main">
+
+    <header role="banner">
+      <span class="logo" aria-label="VisionBridge">Vision<span>Bridge</span></span>
+      <div class="status-pill" aria-live="polite">
+        <span class="sdot" aria-hidden="true"></span>
+        <span id="statusTxt">READY</span>
+      </div>
+    </header>
+
+    <div class="demo-tag" id="demoTag" aria-hidden="true">DEMO</div>
+
+    <!-- Camera -->
+    <section class="cam-wrap" aria-label="Camera viewfinder">
+      <video id="cam" autoplay playsinline muted aria-hidden="true"></video>
+      <canvas id="cap" aria-hidden="true"></canvas>
+      <div class="cam-ui" aria-hidden="true">
+        <div class="beam" id="beam"></div>
+        <div class="brk brk-tl"></div>
+        <div class="brk brk-tr"></div>
+        <div class="brk brk-bl"></div>
+        <div class="brk brk-br"></div>
+        <div class="cam-mode-badge" id="camBadge">SELECT A MODE</div>
+        <div class="cam-ph" id="camPh">
+          <div class="cam-ph-eye"></div>
+          <p>Select a mode below<br>then tap Analyse</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Result box -->
+    <section class="result-wrap" id="resultWrap" aria-live="polite" aria-label="AI response output">
+      <div class="result-eye">
+        <span class="rpip" id="rpip" aria-hidden="true"></span>
+        <span id="resultLabel">WAITING FOR INPUT</span>
+      </div>
+      <p class="result-txt" id="resultTxt">
+        Choose a mode — Describe, Read, Navigate, or Emergency — then tap Analyse or speak a command.
+      </p>
+      <div class="dots" id="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+    </section>
+
+    <!-- Navigate live panel -->
+    <div id="navpanel" role="region" aria-live="assertive" aria-label="Live navigation guidance">
+      <div class="nav-hdr">
+        <span class="nblink" aria-hidden="true"></span>
+        LIVE NAVIGATION MODE
+      </div>
+      <p class="nav-txt" id="navTxt">Scanning your path...</p>
+      <p class="nav-sub" id="navSub">Initialising sensors</p>
+      <button class="nav-stop" onclick="navStop()" aria-label="Stop live navigation">⬛ STOP NAVIGATION</button>
+    </div>
+
+    <!-- Mode tiles -->
+    <section aria-label="Select mode" role="group">
+      <div class="modes">
+        <button class="mtile m-describe sel" id="t-describe" onclick="pick('describe')" aria-pressed="true"
+          aria-label="Describe mode: AI describes what the camera sees">
+          <span class="tnum" aria-hidden="true">01</span>
+          <span class="tname">Describe</span>
+          <span class="tsub">Scene & surroundings</span>
+        </button>
+        <button class="mtile m-read" id="t-read" onclick="pick('read')" aria-pressed="false"
+          aria-label="Read mode: AI reads all visible text aloud">
+          <span class="tnum" aria-hidden="true">02</span>
+          <span class="tname">Read</span>
+          <span class="tsub">Labels, signs, menus</span>
+        </button>
+        <button class="mtile m-navigate" id="t-navigate" onclick="pick('navigate')" aria-pressed="false"
+          aria-label="Navigate mode: real-time obstacle and path guidance">
+          <span class="tnum" aria-hidden="true">03</span>
+          <span class="tname">Navigate</span>
+          <span class="tsub">Live obstacle guidance</span>
+        </button>
+        <button class="mtile m-emergency" id="t-emergency" onclick="sosOpen()" aria-pressed="false"
+          aria-label="Emergency mode: SOS and immediate exit guidance">
+          <span class="tnum" aria-hidden="true">04</span>
+          <span class="tname">Emergency</span>
+          <span class="tsub">SOS & exit path</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Action bar -->
+    <div class="actbar" role="toolbar" aria-label="Actions">
+      <button class="btn-main" id="mainBtn" onclick="go()" aria-label="Analyse current camera view">
+        <span id="mainIcon" aria-hidden="true">◆</span>
+        <span id="mainLbl">ANALYSE</span>
+      </button>
+      <button class="btn-icon" id="stopBtn" onclick="stopSpeech()" aria-label="Stop speaking" title="Stop speaking" style="display:none;">🔇</button>
+      <button class="btn-icon" id="micBtn" onclick="micToggle()" aria-label="Toggle voice commands" aria-pressed="false"
+        title="Voice commands">🎤</button>
+      <button class="btn-icon" onclick="cfgOpen()" aria-label="Open settings" title="Settings">⚙️</button>
+    </div>
+
+  </div><!-- /app -->
+
+  <!-- SOS Overlay -->
+  <div id="sos" role="alertdialog" aria-modal="true" aria-label="Emergency mode activated">
+    <div class="sos-eye" aria-hidden="true"></div>
+    <h2 class="sos-h">SOS</h2>
+    <p class="sos-p" id="sosP">Scanning for nearest exit and safe path. Stay calm and stay still.</p>
+    <button class="sos-close" onclick="sosClose()" aria-label="Close emergency mode">CLOSE EMERGENCY</button>
+  </div>
+
+  <!-- Settings Sheet -->
+  <div id="cfg" role="dialog" aria-modal="true" aria-label="Settings" onclick="cfgBg(event)">
+    <div class="cfg-sheet">
+      <div class="cfg-drag" aria-hidden="true"></div>
+      <h2 class="cfg-h">Settings</h2>
+      <p class="cfg-sub">Configure your API key and preferences. Supports both <strong>Google Gemini (free)</strong> and
+        Anthropic Claude. The app runs in demo simulation mode without a key.</p>
+
+      <!-- API Status -->
+      <div class="api-status" id="apiStatus" aria-live="polite">
+        <span class="api-dot" id="apiDot" aria-hidden="true"></span>
+        <span class="api-status-txt" id="apiStatusTxt">No API key — demo mode active</span>
+        <button class="api-test-btn" onclick="testAPI()" aria-label="Test API connection">TEST</button>
+      </div>
+
+      <div class="cfg-section-title">API CONFIGURATION</div>
+
+      <label class="cfg-label" for="providerSel">API Provider</label>
+      <select class="cfg-select" id="providerSel" aria-label="Select API provider" onchange="onProviderChange()">
+        <option value="gemini">Google Gemini (free tier available)</option>
+        <option value="anthropic">Anthropic Claude</option>
+      </select>
+
+      <label class="cfg-label" for="apiKey" id="apiKeyLabel">Gemini API Key</label>
+      <input type="password" class="cfg-input" id="apiKey" placeholder="AIzaSy..." autocomplete="off" spellcheck="false"
+        aria-label="Enter your API key" oninput="onKeyInput()">
+
+      <label class="cfg-label" for="modelSel" id="modelSelLabel">Gemini Model</label>
+      <select class="cfg-select" id="modelSel" aria-label="Select AI model">
+        <option value="gemini-2.5-flash" selected>gemini-2.5-flash (recommended, free)</option>
+        <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (fastest, free)</option>
+        <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (stable, free)</option>
+      </select>
+
+      <div class="cfg-section-title">VOICE & ACCESSIBILITY</div>
+
+      <label class="cfg-label" for="spRate">Speech Speed — <span id="rateVal">0.9×</span></label>
+      <input type="range" class="cfg-range" id="spRate" min="0.5" max="1.6" step="0.1" value="0.9"
+        oninput="document.getElementById('rateVal').textContent=this.value+'×'"
+        aria-label="Adjust speech playback speed">
+      <div class="cfg-range-row"><span>Slow</span><span>Fast</span></div>
+
+      <label class="cfg-label" for="navInterval">Navigate scan interval (seconds) — <span id="navVal">5</span>s</label>
+      <input type="range" class="cfg-range" id="navInterval" min="3" max="10" step="1" value="5"
+        oninput="document.getElementById('navVal').textContent=this.value"
+        aria-label="How often navigation scans in seconds">
+      <div class="cfg-range-row"><span>3s (fast)</span><span>10s (slow)</span></div>
+
+      <button class="cfg-save" onclick="cfgSave()" aria-label="Save all settings">SAVE SETTINGS</button>
+
+      <div class="cfg-note" id="cfgNote">
+        <strong>How to get a free Gemini API key:</strong> Go to <strong>aistudio.google.com/apikey</strong> → sign in
+        with Google → Create API Key. It's completely free — generous limits for personal use.<br><br>
+        <strong>Prefer Anthropic?</strong> Switch provider above. Go to <strong>console.anthropic.com</strong> → API
+        Keys → Create Key.<br><br>
+        <strong>Your key is stored only in your browser's local storage</strong> and never sent anywhere except directly
+        to the AI provider's servers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Voice chip -->
+  <div id="vc" aria-live="polite" aria-label="Voice input is active">
+    <div class="vbars" aria-hidden="true">
+      <div class="vb"></div>
+      <div class="vb"></div>
+      <div class="vb"></div>
+      <div class="vb"></div>
+      <div class="vb"></div>
+    </div>
+    <span id="vcTxt">LISTENING...</span>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // ══════════════════════════════════════════════════
+    //  STATE
+    // ══════════════════════════════════════════════════
+    const S = {
+      mode: 'describe',
+      busy: false,
+      abortCtrl: null,
+      camOn: false,
+      navigating: false,
+      navTimer: null,
+      navIdx: 0,
+      listening: false,
+      recog: null,
+      synth: window.speechSynthesis,
+      provider: localStorage.getItem('vb_provider') || 'gemini',
+      key: localStorage.getItem('vb_key') || '',
+      model: localStorage.getItem('vb_model') || 'gemini-2.5-flash',
+      rate: parseFloat(localStorage.getItem('vb_rate') || '0.9'),
+      navInt: parseInt(localStorage.getItem('vb_navint') || '5'),
+    };
+
+    // Mode accent colours
+    const PIPS = { describe: '#4a7c59', read: '#e8a020', navigate: '#5b8ccc', emergency: '#c94a2a' };
+    const MODE_LABELS = { describe: 'DESCRIBE', read: 'READ', navigate: 'NAVIGATE', emergency: 'EMERGENCY' };
+
+    // ══════════════════════════════════════════════════
+    //  DEMO RESPONSES (used when no API key)
+    // ══════════════════════════════════════════════════
+    const DEMO = {
+      describe: [
+        "You're in a corridor. A table with a vase sits about one and a half metres ahead on your right. The path ahead is clear for roughly four metres. A door at the far end is slightly left of centre — it appears to be ajar.",
+        "You appear to be in a kitchen. There is a countertop with a kettle along the left wall. A chair sits in the centre of the room. A window on the far right is letting in natural light. The floor is tiled.",
+        "You are outdoors on a pavement. There is a pedestrian crossing approximately three metres ahead. A lamppost is to your left. A parked car about two metres to your right. The path forward looks clear.",
+        "You are in what appears to be an office. Several desks are arranged ahead of you. A monitor is on the nearest desk, about two metres away. A corridor leads off to the right. The lighting is bright and even.",
+      ],
+      read: [
+        "The label reads: Expiry date, fifteenth March 2026. Store in a cool dry place. Keep out of reach of children. Refrigerate after opening for best results.",
+        "Restaurant menu. Today's specials — grilled salmon with lemon butter, four hundred and twenty rupees. Paneer tikka masala, two ninety. Mango lassi, eighty rupees. Lunch combo available for three fifty.",
+        "The sign reads: Platform three, Chennai Central. Next train at fourteen thirty five toward Tambaram. Second class coaches C, D, and E. Reserved coaches A and B. Please stand behind the yellow line.",
+        "Medicine label: Paracetamol 500 milligrams. Take one to two tablets every four to six hours. Do not exceed eight tablets in twenty four hours. Keep away from children. Manufactured by Sun Pharma.",
+      ],
+      navigate: [
+        "Path ahead is clear. Take three confident steps forward, then pause for the next instruction.",
+        "Chair on your right, about half a metre away. Shift slightly to your left before continuing forward.",
+        "Step down coming — the surface drops approximately fifteen centimetres. Slow down and feel forward with your foot before committing your weight.",
+        "Door directly ahead, about one metre. The handle is at your right hand height.",
+        "Five metres of clear open space directly ahead. Continue straight forward.",
+        "Object on the floor directly ahead — looks like a bag or box. Stop. Step to your right to go around it safely.",
+        "You are approaching a wall. Turn left approximately ninety degrees to continue along the corridor.",
+      ],
+      emergency: [
+        "Emergency mode active. I can see a doorway approximately four metres ahead and slightly to your right. That is your nearest exit. Walk toward the light source. There is no immediate obstacle between you and the exit. Breathe steadily and move at a comfortable pace. You are not in immediate danger.",
+      ],
+    };
+
+    // ══════════════════════════════════════════════════
+    //  BOOT
+    // ══════════════════════════════════════════════════
+    async function boot() {
+      document.getElementById('splash').classList.add('gone');
+      const app = document.getElementById('app');
+      app.style.display = 'flex';
+      // init settings UI
+      document.getElementById('providerSel').value = S.provider;
+      document.getElementById('apiKey').value = S.key;
+      document.getElementById('spRate').value = S.rate;
+      document.getElementById('rateVal').textContent = S.rate + '×';
+      document.getElementById('navInterval').value = S.navInt;
+      document.getElementById('navVal').textContent = S.navInt;
+      onProviderChange(); // sync UI labels for current provider
+      document.getElementById('modelSel').value = S.model; // set AFTER provider change rebuilds dropdown
+      updateAPIStatus();
+      updateDemoTag();
+      say("Welcome to VisionBridge. Four modes available: Describe, Read, Navigate, and Emergency. Tap any mode, then tap Analyse. Or use the microphone button for voice commands.");
+
+      // Request camera & microphone permissions on mobile
+      await requestPermissions();
+    }
+
+    async function requestPermissions() {
+      // CRITICAL: getUserMedia requires HTTPS on mobile browsers (except localhost)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('mediaDevices API not available — likely file:// or non-HTTPS');
+        if (location.protocol === 'file:') {
+          toast('⚠ Open via HTTPS for camera on mobile');
+          say('Camera requires a secure connection. On mobile, please host this page on a web server with HTTPS, or use a tool like Live Server. The file protocol does not support camera access on mobile browsers.');
+        } else {
+          toast('Camera API not available');
+        }
+        return;
+      }
+
+      // Request camera and microphone SEPARATELY for better mobile compatibility
+
+      // 1. Camera
+      try {
+        const camStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+        });
+        const v = document.getElementById('cam');
+        v.srcObject = camStream;
+        v.classList.add('on');
+        // Explicit play() call — iOS Safari ignores autoplay attribute
+        try { await v.play(); } catch(pe) { console.warn('Video play():', pe); }
+        document.getElementById('camPh').style.display = 'none';
+        S.camOn = true;
+        toast('✓ Camera ready');
+      } catch (e) {
+        console.warn('Camera permission:', e.name, e.message);
+        if (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError') {
+          toast('Please allow camera access');
+          say('Camera access was denied. Please allow it in your browser settings and refresh.');
+        } else if (e.name === 'NotFoundError') {
+          toast('No camera found — demo mode');
+        } else if (e.name === 'NotReadableError') {
+          toast('Camera in use by another app');
+          say('Camera appears to be in use by another application. Please close other apps using the camera and try again.');
+        } else {
+          toast('Camera issue — demo mode active');
+          console.error('Camera error:', e);
+        }
+      }
+
+      // 2. Microphone (just pre-request permission, don't keep the stream)
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStream.getTracks().forEach(t => t.stop());
+      } catch (e) {
+        console.warn('Mic permission:', e.name, e.message);
+      }
+    }
+
+    // ══════════════════════════════════════════════════
+    //  MODE SELECTION
+    // ══════════════════════════════════════════════════
+    function pick(m) {
+      if (S.navigating && m !== 'navigate') navStop();
+      S.mode = m;
+      ['describe', 'read', 'navigate', 'emergency'].forEach(id => {
+        const el = document.getElementById('t-' + id);
+        el.classList.remove('sel');
+        el.setAttribute('aria-pressed', 'false');
+      });
+      document.getElementById('t-' + m).classList.add('sel');
+      document.getElementById('t-' + m).setAttribute('aria-pressed', 'true');
+      document.getElementById('rpip').style.background = PIPS[m];
+      document.getElementById('camBadge').textContent = MODE_LABELS[m] + ' MODE';
+      document.getElementById('mainLbl').textContent = m === 'navigate' ? 'START NAVIGATION' : 'ANALYSE';
+      setStatus(m.toUpperCase());
+      say(m + ' mode selected.');
+      toast(m.charAt(0).toUpperCase() + m.slice(1) + ' mode');
+    }
+
+    // ══════════════════════════════════════════════════
+    //  MAIN ACTION
+    // ══════════════════════════════════════════════════
+    async function go() {
+      if (S.busy) { cancelAnalysis(); return; }
+      if (S.mode === 'navigate') {
+        if (S.navigating) { navStop(); return; }
+        navStart(); return;
+      }
+      await analyse();
+    }
+
+    function cancelAnalysis() {
+      if (S.abortCtrl) { S.abortCtrl.abort(); S.abortCtrl = null; }
+      S.busy = false;
+      setBusy(false);
+      document.getElementById('beam').classList.remove('go');
+      document.getElementById('resultWrap').classList.remove('lit');
+      setResult(S.mode.toUpperCase(), 'Analysis cancelled.', false);
+      stopSpeech();
+      toast('Cancelled');
+    }
+
+    async function analyse() {
+      if (S.busy) return;
+      S.busy = true;
+      S.abortCtrl = new AbortController();
+      setBusy(true);
+      setResult('PROCESSING', 'Capturing image and sending to AI…', true);
+      document.getElementById('beam').classList.add('go');
+      document.getElementById('resultWrap').classList.add('lit');
+      await camOn();
+      await wait(500);
+      if (!S.busy) return; // was cancelled during wait
+      try {
+        const text = S.key ? await callAI(S.abortCtrl.signal) : await fakeCall();
+        if (!S.busy) return; // was cancelled
+        setResult(S.mode.toUpperCase() + ' MODE', text, false);
+        say(text); al(text);
+      } catch (e) {
+        if (e.name === 'AbortError') return; // user cancelled
+        console.error(e);
+        const errMsg = 'Could not get a response. ' + (S.key ? 'Check your API key is valid and you have credits. Error: ' + e.message : 'Demo mode error.');
+        setResult('ERROR', errMsg, false);
+        say('Error getting response. Please check your settings.');
+        updateAPIStatus('error');
+      }
+      S.busy = false;
+      S.abortCtrl = null;
+      setBusy(false);
+      document.getElementById('beam').classList.remove('go');
+      document.getElementById('resultWrap').classList.remove('lit');
+    }
+
+    // ══════════════════════════════════════════════════
+    //  AI API CALLS  ← THE KEY INTEGRATION
+    // ══════════════════════════════════════════════════
+    const PROMPTS = {
+      describe: "You are an AI assistant helping a visually impaired person understand their surroundings. Describe the scene in natural, clear spoken language. Focus on: what is directly ahead, nearby objects and their positions, estimated distances where possible, and any potential hazards. Be concise — under 80 words. Speak directly to the person as if you are their eyes.",
+      read: "You are an AI assistant helping a visually impaired person. Read all visible text in this image clearly and completely. State what type of content it is first (menu, sign, label, medicine, etc.). Organise the information logically. Keep the reading natural and flowing — do not list raw text, make it sound like someone reading aloud.",
+      navigate: "You are a real-time navigation guide for a visually impaired person who is walking. Describe ONLY what is immediately relevant for their next 1 to 3 steps. Be extremely concise — maximum 2 short sentences. Focus on: is the path clear, any obstacles or hazards, direction to move. Use simple directional language: left, right, ahead, stop. Do not describe the full scene.",
+    };
+
+    function captureFrame() {
+      const video = document.getElementById('cam');
+      const canvas = document.getElementById('cap');
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      return canvas.toDataURL('image/jpeg', 0.75).split(',')[1];
+    }
+
+    async function callAI(signal) {
+      return S.provider === 'gemini' ? await callGemini(signal) : await callClaude(signal);
+    }
+
+    // ── GEMINI API ──
+    async function callGemini(signal) {
+      const b64 = captureFrame();
+      const prompt = PROMPTS[S.mode] || PROMPTS.describe;
+
+      const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + S.model + ':generateContent?key=' + S.key;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: signal,
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType: 'image/jpeg', data: b64 } },
+              { text: prompt }
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 256 }
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const msg = errData.error?.message || 'HTTP ' + response.status;
+        throw new Error(msg);
+      }
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    }
+
+    // ── CLAUDE API ──
+    async function callClaude(signal) {
+      const b64 = captureFrame();
+      const prompt = PROMPTS[S.mode] || PROMPTS.describe;
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': S.key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: S.model,
+          max_tokens: 256,
+          messages: [{
+            role: 'user',
+            content: [
+              { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+              { type: 'text', text: prompt }
+            ]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || 'HTTP ' + response.status);
+      }
+
+      const data = await response.json();
+      return data.content[0].text;
+    }
+
+    // Test API key connection
+    async function testAPI() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) { toast('Enter an API key first'); return; }
+
+      const prov = document.getElementById('providerSel').value;
+      document.getElementById('apiStatusTxt').textContent = 'Testing connection...';
+      document.getElementById('apiDot').className = 'api-dot';
+
+      try {
+        let res;
+        if (prov === 'gemini') {
+          const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=' + key;
+          res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: 'Say OK' }] }],
+              generationConfig: { maxOutputTokens: 5 }
+            })
+          });
+        } else {
+          res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': key,
+              'anthropic-version': '2023-06-01',
+              'anthropic-dangerous-direct-browser-access': 'true',
+            },
+            body: JSON.stringify({
+              model: 'claude-haiku-4-5',
+              max_tokens: 10,
+              messages: [{ role: 'user', content: 'Say OK' }]
+            })
+          });
+        }
+        if (res.ok) {
+          updateAPIStatus('live');
+          toast('✓ API key works — live mode ready');
+          say('API key verified. Live AI mode is ready.');
+        } else {
+          const d = await res.json().catch(() => ({}));
+          updateAPIStatus('error');
+          toast('API error: ' + (d.error?.message || res.status));
+        }
+      } catch (e) {
+        updateAPIStatus('error');
+        toast('Connection failed — check internet');
+      }
+    }
+
+    function onKeyInput() {
+      const key = document.getElementById('apiKey').value.trim();
+      if (!key) {
+        updateAPIStatus('none');
+      } else {
+        document.getElementById('apiDot').className = 'api-dot';
+        document.getElementById('apiStatusTxt').textContent = 'Key entered — tap TEST to verify';
+      }
+    }
+
+    function updateAPIStatus(state) {
+      const dot = document.getElementById('apiDot');
+      const txt = document.getElementById('apiStatusTxt');
+      if (state === 'live') {
+        dot.className = 'api-dot live';
+        txt.textContent = 'Connected — live AI mode active';
+      } else if (state === 'error') {
+        dot.className = 'api-dot error';
+        txt.textContent = 'API key invalid or no credits';
+      } else {
+        dot.className = 'api-dot';
+        txt.textContent = S.key ? 'Key saved — tap TEST to verify' : 'No API key — demo mode active';
+      }
+    }
+
+    // ══════════════════════════════════════════════════
+    //  DEMO FAKE CALL
+    // ══════════════════════════════════════════════════
+    async function fakeCall() {
+      await wait(1600 + Math.random() * 800);
+      const pool = DEMO[S.mode] || DEMO.describe;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    // ══════════════════════════════════════════════════
+    //  NAVIGATION MODE
+    // ══════════════════════════════════════════════════
+    function navStart() {
+      if (S.navigating) return;
+      S.navigating = true; S.navIdx = 0;
+      document.getElementById('navpanel').classList.add('on');
+      document.getElementById('mainLbl').textContent = 'NAVIGATING...';
+      document.getElementById('mainBtn').classList.add('busy');
+      setStatus('NAVIGATING');
+      camOn();
+      say("Navigation mode started. I will guide you continuously. Point the camera ahead as you walk. Say stop to end navigation.");
+      navLoop();
+      S.navTimer = setInterval(navLoop, S.navInt * 1000);
+    }
+
+    async function navLoop() {
+      let txt;
+      if (S.key) {
+        try { txt = await callAI(); }
+        catch (e) {
+          console.error('Nav API error:', e);
+          txt = DEMO.navigate[S.navIdx % DEMO.navigate.length];
+        }
+      } else {
+        await wait(700);
+        txt = DEMO.navigate[S.navIdx % DEMO.navigate.length];
+      }
+      S.navIdx++;
+      document.getElementById('navTxt').innerHTML = txt;
+      document.getElementById('navSub').textContent = '↻ Next scan in ' + S.navInt + ' seconds';
+      al(txt); say(txt);
+    }
+
+    function navStop() {
+      S.navigating = false;
+      clearInterval(S.navTimer);
+      document.getElementById('navpanel').classList.remove('on');
+      document.getElementById('mainLbl').textContent = 'START NAVIGATION';
+      document.getElementById('mainBtn').classList.remove('busy');
+      setStatus('READY');
+      say("Navigation stopped. You are safe. Tap Start Navigation to resume.");
+    }
+
+    // ══════════════════════════════════════════════════
+    //  EMERGENCY
+    // ══════════════════════════════════════════════════
+    async function sosOpen() {
+      document.getElementById('sos').classList.add('on');
+      say("Emergency mode activated. Scanning your surroundings for the nearest exit. Stay calm and stay still.");
+      await wait(1800);
+      let txt;
+      if (S.key) {
+        try {
+          S.mode = 'describe';
+          await camOn();
+          txt = await callAI();
+          txt = "Emergency mode. " + txt + " Stay calm and move toward the clearest exit path.";
+        } catch {
+          txt = DEMO.emergency[0];
+        }
+      } else {
+        txt = DEMO.emergency[0];
+      }
+      document.getElementById('sosP').textContent = txt;
+      say(txt); al('Emergency: ' + txt);
+    }
+
+    function sosClose() {
+      document.getElementById('sos').classList.remove('on');
+      say("Emergency mode closed. You are back in the main app.");
+    }
+
+    // ══════════════════════════════════════════════════
+    //  CAMERA
+    // ══════════════════════════════════════════════════
+    async function camOn() {
+      if (S.camOn) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.warn('mediaDevices not available for camOn');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+        });
+        const v = document.getElementById('cam');
+        v.srcObject = stream;
+        v.classList.add('on');
+        try { await v.play(); } catch(pe) { console.warn('Video play():', pe); }
+        document.getElementById('camPh').style.display = 'none';
+        S.camOn = true;
+      } catch (e) {
+        console.warn('Camera denied:', e);
+        document.getElementById('camPh').querySelector('p').textContent = 'Camera access denied.\nDemo mode uses simulated responses.\nGrant permission and refresh.';
+      }
+    }
+
+    // ══════════════════════════════════════════════════
+    //  VOICE COMMANDS
+    // ══════════════════════════════════════════════════
+    function micToggle() {
+      S.listening ? micOff() : micOn();
+    }
+
+    function micOn() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) { toast('Voice not supported — use Chrome or Safari'); return; }
+      S.recog = new SR();
+      S.recog.continuous = false; S.recog.interimResults = true; S.recog.lang = 'en-IN';
+      S.recog.onstart = () => {
+        S.listening = true;
+        document.getElementById('micBtn').classList.add('mic-on');
+        document.getElementById('micBtn').setAttribute('aria-pressed', 'true');
+        document.getElementById('vc').classList.add('on');
+      };
+      S.recog.onresult = e => {
+        const t = Array.from(e.results).map(r => r[0].transcript).join('');
+        document.getElementById('vcTxt').textContent = t.toUpperCase();
+        if (e.results[e.results.length - 1].isFinal) voiceCmd(t.toLowerCase().trim());
+      };
+      S.recog.onend = micOff;
+      S.recog.onerror = micOff;
+      S.recog.start();
+    }
+
+    function micOff() {
+      S.listening = false;
+      try { S.recog?.stop(); } catch { }
+      document.getElementById('micBtn').classList.remove('mic-on');
+      document.getElementById('micBtn').setAttribute('aria-pressed', 'false');
+      document.getElementById('vc').classList.remove('on');
+    }
+
+    function voiceCmd(t) {
+      if (t.includes('describe') || t.includes('what') || t.includes('see') || t.includes('look')) {
+        pick('describe'); analyse();
+      } else if (t.includes('read') || t.includes('text') || t.includes('sign') || t.includes('label')) {
+        pick('read'); analyse();
+      } else if (t.includes('navigate') || t.includes('go') || t.includes('walk') || t.includes('guide')) {
+        pick('navigate'); navStart();
+      } else if (t.includes('stop') || t.includes('pause') || t.includes('end')) {
+        navStop();
+      } else if (t.includes('emergency') || t.includes('help') || t.includes('sos') || t.includes('danger')) {
+        sosOpen();
+      } else if (t.includes('setting') || t.includes('api') || t.includes('config')) {
+        cfgOpen();
+      } else {
+        say("Didn't catch that. Try: describe, read, navigate, stop, or emergency.");
+      }
+    }
+
+    // ══════════════════════════════════════════════════
+    //  SPEECH
+    // ══════════════════════════════════════════════════
+    function say(text) {
+      if (!S.synth) return;
+      S.synth.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = S.rate; u.pitch = 1.05; u.lang = 'en-IN';
+      const el = document.getElementById('resultTxt');
+      const stopBtn = document.getElementById('stopBtn');
+      el.classList.add('speaking');
+      stopBtn.style.display = 'flex';
+      u.onend = () => { el.classList.remove('speaking'); stopBtn.style.display = 'none'; };
+      S.synth.speak(u);
+    }
+
+    function stopSpeech() {
+      if (S.synth) S.synth.cancel();
+      document.getElementById('resultTxt').classList.remove('speaking');
+      document.getElementById('stopBtn').style.display = 'none';
+      toast('Speech stopped');
+    }
+
+    function al(txt) {
+      const el = document.getElementById('al');
+      el.textContent = '';
+      setTimeout(() => el.textContent = txt, 60);
+    }
+
+    // ══════════════════════════════════════════════════
+    //  SETTINGS
+    // ══════════════════════════════════════════════════
+    function cfgOpen() {
+      document.getElementById('cfg').classList.add('on');
+      document.getElementById('providerSel').value = S.provider;
+      document.getElementById('apiKey').value = S.key;
+      document.getElementById('spRate').value = S.rate;
+      document.getElementById('rateVal').textContent = S.rate + '×';
+      document.getElementById('navInterval').value = S.navInt;
+      document.getElementById('navVal').textContent = S.navInt;
+      onProviderChange();
+      document.getElementById('modelSel').value = S.model; // set AFTER provider change rebuilds dropdown
+      updateAPIStatus();
+      say("Settings open. Choose your API provider, enter your key, then tap TEST to verify, then SAVE.");
+    }
+    function cfgBg(e) { if (e.target === document.getElementById('cfg')) cfgClose(); }
+    function cfgClose() { document.getElementById('cfg').classList.remove('on'); }
+
+    function onProviderChange() {
+      const prov = document.getElementById('providerSel').value;
+      const keyLabel = document.getElementById('apiKeyLabel');
+      const keyInput = document.getElementById('apiKey');
+      const modelLabel = document.getElementById('modelSelLabel');
+      const modelSel = document.getElementById('modelSel');
+      const note = document.getElementById('cfgNote');
+
+      if (prov === 'gemini') {
+        keyLabel.textContent = 'Gemini API Key';
+        keyInput.placeholder = 'AIzaSy...';
+        modelLabel.textContent = 'Gemini Model';
+        modelSel.innerHTML = `
+      <option value="gemini-2.5-flash">gemini-2.5-flash (recommended, free)</option>
+      <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite (fastest, free)</option>
+      <option value="gemini-2.0-flash-lite">gemini-2.0-flash-lite (stable, free)</option>
+    `;
+        note.innerHTML = '<strong>How to get a free Gemini API key:</strong> Go to <strong>aistudio.google.com/apikey</strong> → sign in with Google → Create API Key. It\'s completely free with generous limits.<br><br><strong>Your key is stored only in your browser\'s local storage</strong> and never sent anywhere except directly to Google\'s servers.';
+      } else {
+        keyLabel.textContent = 'Anthropic API Key';
+        keyInput.placeholder = 'sk-ant-api03-...';
+        modelLabel.textContent = 'Claude Model';
+        modelSel.innerHTML = `
+      <option value="claude-sonnet-4-5">claude-sonnet-4-5 (recommended)</option>
+      <option value="claude-haiku-4-5">claude-haiku-4-5 (fastest)</option>
+    `;
+        note.innerHTML = '<strong>How to get a free API key:</strong> Go to <strong>console.anthropic.com</strong> → sign up → API Keys → Create Key. Paste it above. New accounts get free credits.<br><br><strong>Your key is stored only in your browser\'s local storage</strong> and never sent anywhere except directly to Anthropic\'s servers.';
+      }
+    }
+
+    function cfgSave() {
+      S.provider = document.getElementById('providerSel').value;
+      S.key = document.getElementById('apiKey').value.trim();
+      S.model = document.getElementById('modelSel').value;
+      S.rate = parseFloat(document.getElementById('spRate').value);
+      S.navInt = parseInt(document.getElementById('navInterval').value);
+      localStorage.setItem('vb_provider', S.provider);
+      localStorage.setItem('vb_key', S.key);
+      localStorage.setItem('vb_model', S.model);
+      localStorage.setItem('vb_rate', S.rate);
+      localStorage.setItem('vb_navint', S.navInt);
+      cfgClose();
+      updateDemoTag();
+      updateAPIStatus();
+      const provName = S.provider === 'gemini' ? 'Gemini' : 'Claude';
+      toast(S.key ? '✓ Settings saved — ' + provName + ' live mode' : 'Settings saved — demo mode');
+      say(S.key ? 'Settings saved. Live AI mode with ' + provName + ' is active. Tap Analyse to begin.' : 'Settings saved. Running in demo simulation mode.');
+    }
+
+    function updateDemoTag() {
+      const tag = document.getElementById('demoTag');
+      const provName = S.provider === 'gemini' ? 'GEMINI' : 'CLAUDE';
+      tag.textContent = S.key ? provName + ' LIVE' : 'DEMO';
+      tag.style.background = S.key ? '#4a7c59' : '#e8a020';
+      tag.style.color = S.key ? '#f5f0e8' : '#1a1410';
+    }
+
+    // ══════════════════════════════════════════════════
+    //  HELPERS
+    // ══════════════════════════════════════════════════
+    function setBusy(on) {
+      document.getElementById('mainBtn').classList.toggle('busy', on);
+      document.getElementById('mainIcon').textContent = on ? '✕' : '◆';
+      document.getElementById('mainLbl').textContent = on ? 'CANCEL' : (S.mode === 'navigate' ? 'START NAVIGATION' : 'ANALYSE');
+    }
+    function setResult(label, txt, thinking) {
+      document.getElementById('resultLabel').textContent = label;
+      document.getElementById('resultTxt').textContent = txt;
+      document.getElementById('dots').classList.toggle('on', thinking);
+      document.getElementById('rpip').style.background = PIPS[S.mode] || '#e8a020';
+    }
+    function setStatus(txt) { document.getElementById('statusTxt').textContent = txt; }
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('on');
+      setTimeout(() => el.classList.remove('on'), 2800);
+    }
+    function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    // ══════════════════════════════════════════════════
+    //  KEYBOARD SHORTCUTS
+    // ══════════════════════════════════════════════════
+    document.addEventListener('keydown', e => {
+      if (document.getElementById('cfg').classList.contains('on')) return;
+      if (e.key === 'd') pick('describe');
+      if (e.key === 'r') pick('read');
+      if (e.key === 'n') pick('navigate');
+      if (e.key === ' ') { e.preventDefault(); go(); }
+      if (e.key === 'm') micToggle();
+      if (e.key === 's') cfgOpen();
+      if (e.key === 'Escape') { sosClose(); cfgClose(); navStop(); }
+    });
+
+    // 3-finger long press → emergency
+    let pressTimer;
+    document.addEventListener('touchstart', e => {
+      if (e.touches.length === 3) pressTimer = setTimeout(sosOpen, 900);
+    });
+    document.addEventListener('touchend', () => clearTimeout(pressTimer));
+  </script>
+</body>
+
+</html>
